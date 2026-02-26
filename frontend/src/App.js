@@ -6,21 +6,20 @@ function App() {
   const [palette, setPalette] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [backgroundStyle, setBackgroundStyle] = useState({});
+  const [copied, setCopied] = useState(false);
 
-  // Real-time background color changes as user types
   useEffect(() => {
     if (inputText.length > 3) {
-      // Simple sentiment-based color shift
-      const positiveWords = ['happy', 'joy', 'love', 'excited', 'creative', 'beautiful', 'amazing'];
-      const negativeWords = ['sad', 'angry', 'hate', 'scared', 'dark', 'tired', 'frustrated'];
+      const positiveWords = ['happy', 'joy', 'love', 'excited', 'creative', 'beautiful', 'amazing', 'peace', 'calm'];
+      const negativeWords = ['sad', 'angry', 'hate', 'scared', 'dark', 'tired', 'frustrated', 'anxious'];
       
       const text = inputText.toLowerCase();
-      let hue = 260; // default purple-blue
+      let hue = 260;
       
       if (positiveWords.some(word => text.includes(word))) {
-        hue = 45; // warm yellow
+        hue = 45;
       } else if (negativeWords.some(word => text.includes(word))) {
-        hue = 220; // blue
+        hue = 220;
       }
       
       setBackgroundStyle({
@@ -34,11 +33,9 @@ function App() {
     
     setIsLoading(true);
     try {
-      const response = await fetch('/api/synth/text-to-colors', {
+      const response = await fetch('/api/synth', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: inputText }),
       });
       
@@ -53,26 +50,23 @@ function App() {
     }
   };
 
-  const exportCSS = async () => {
+  const exportCSS = () => {
     if (!palette) return;
     
-    try {
-      const response = await fetch('/api/synth/export/css', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ palette: palette.colors }),
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        navigator.clipboard.writeText(data.output);
-        alert('CSS variables copied to clipboard!');
-      }
-    } catch (error) {
-      console.error('Error exporting CSS:', error);
-    }
+    const cssVars = palette.colors.map((color, i) => 
+      `  --synth-color-${i + 1}: ${color};`
+    ).join('\n');
+    
+    const css = `:root {\n${cssVars}\n}`;
+    navigator.clipboard.writeText(css);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const copyColor = (color) => {
+    navigator.clipboard.writeText(color);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   };
 
   return (
@@ -80,14 +74,15 @@ function App() {
       <div className="container">
         <header className="header">
           <h1>Synth</h1>
-          <p>Turn feelings into functional design palettes</p>
+          <p className="tagline">Turn feelings into functional design palettes</p>
+          <p className="subtext">Synesthesia as a Service</p>
         </header>
 
         <div className="input-section">
           <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="Describe how you're feeling... (e.g., 'I feel creative and energetic!')"
+            placeholder="Describe how you're feeling... (e.g., 'I feel creative and energetic!' or 'peaceful but contemplative')"
             className="emotion-input"
             rows={3}
           />
@@ -96,7 +91,7 @@ function App() {
             disabled={!inputText.trim() || isLoading}
             className="generate-btn"
           >
-            {isLoading ? 'Generating...' : 'Generate Palette'}
+            {isLoading ? '✨ Generating...' : '🎨 Generate Palette'}
           </button>
         </div>
 
@@ -109,8 +104,8 @@ function App() {
                   key={index}
                   className="color-swatch"
                   style={{ backgroundColor: color }}
-                  title={color}
-                  onClick={() => navigator.clipboard.writeText(color)}
+                  onClick={() => copyColor(color)}
+                  title="Click to copy"
                 >
                   <span className="color-code">{color}</span>
                 </div>
@@ -119,19 +114,20 @@ function App() {
             
             <div className="palette-info">
               <p><strong>Detected emotions:</strong> {palette.emotions.join(', ')}</p>
-              <p><strong>Primary color:</strong> {palette.primary}</p>
+              <p><strong>Primary:</strong> {palette.primary}</p>
             </div>
 
             <div className="export-section">
               <button onClick={exportCSS} className="export-btn">
-                Export CSS Variables
+                {copied ? '✓ Copied!' : '📋 Export CSS Variables'}
               </button>
             </div>
           </div>
         )}
 
         <footer className="footer">
-          <p>Built by AI agents • <a href="https://github.com/synthcraft/synth-app" target="_blank" rel="noopener noreferrer">GitHub</a></p>
+          <p>Built by <strong>Ted</strong> & <strong>Sparky</strong> (AI agents) during a Clawmegle session</p>
+          <p><a href="https://github.com/tedkaczynski-the-bot/synth" target="_blank" rel="noopener noreferrer">GitHub</a> • <a href="https://clawmegle.xyz" target="_blank" rel="noopener noreferrer">Clawmegle</a></p>
         </footer>
       </div>
     </div>
